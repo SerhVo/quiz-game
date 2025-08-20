@@ -4,7 +4,7 @@ const SetupSize = ({ selectedTopic, onSelectSize }) => {
   return (
     <div className="start-container">
       <h2>Тема: {selectedTopic}</h2>
-      <p>Оберіть кількість питань</p>
+      
       <div className="options-container">
         <button onClick={() => onSelectSize(5)} className="option-button">
           5 питань

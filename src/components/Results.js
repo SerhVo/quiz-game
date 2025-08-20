@@ -7,6 +7,8 @@ const Results = ({
   totalTime,
   onRestartQuiz,
   quizEndTime,
+  onShowHistory,
+  getResultFeedback, // Отримуємо функцію з props
 }) => {
   const formatTime = (seconds) => {
     if (seconds === null) return "—";
@@ -27,28 +29,7 @@ const Results = ({
     return date.toLocaleDateString("uk-UA", options);
   };
 
-  const getResultFeedback = () => {
-    const percentage = (score / totalQuestions) * 100;
-    let emoji = "";
-    let message = "";
-
-    if (percentage >= 80) {
-      emoji = "🤩";
-      message = "Чудово";
-    } else if (percentage >= 60) {
-      emoji = "👍";
-      message = "Добре";
-    } else if (percentage >= 30) {
-      emoji = "🙂";
-      message = "Задовільно";
-    } else {
-      emoji = "😞";
-      message = "Дуже погано";
-    }
-
-    return `${emoji} ${message}`;
-  };
-
+  // getResultClass тепер залежить від відсотка, а не від getResultFeedback
   const getResultClass = () => {
     const percentage = (score / totalQuestions) * 100;
     if (percentage >= 80) {
@@ -67,36 +48,23 @@ const Results = ({
       <h2 className="welcome-message">Вітаємо, {userName}!</h2>
 
       <p className={`result-text ${getResultClass()}`}>
-        Ваш результат: {getResultFeedback()}
+        Ваш результат: {getResultFeedback(score, totalQuestions)}
       </p>
-      <div className="score-table">
-        <h3>Таблиця результатів</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Ім'я</th>
-              <th>Дата та час</th>
-              <th>Кількість питань</th>
-              <th>Витрачений час</th>
-              <th>Бали</th>
-              <th>Результат</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>{userName}</td>
-              <td>{formatDateTime(quizEndTime)}</td>
-              <td>{totalQuestions}</td>
-              <td>{formatTime(totalTime)}</td>
-              <td>{score}</td>
-              <td>{getResultFeedback()}</td>
-            </tr>
-          </tbody>
-        </table>
+
+      <p className={`result-text ${getResultClass()}`}>
+        У тебе: {score} правильних відповідей із {totalQuestions} питань.
+      </p>
+      <p className={`result-text ${getResultClass()}`}>
+        Тобі знадобилось: {formatTime(totalTime)}
+      </p>
+      <div className="welcome-buttons">
+        <button onClick={onRestartQuiz} className="restart-button">
+          Спробувати ще
+        </button>
+        <button onClick={onShowHistory} className="history-button">
+          Показати історію
+        </button>
       </div>
-      <button onClick={onRestartQuiz} className="restart-button">
-        Спробувати ще
-      </button>
     </div>
   );
 };

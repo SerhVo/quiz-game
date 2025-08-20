@@ -4,6 +4,7 @@ import Results from "./Results";
 import SetupTopic from "./SetupTopic";
 import SetupSize from "./SetupSize";
 import SetupName from "./SetupName";
+import History from "./History";
 
 const Quiz = ({
   onQuizStart,
@@ -26,9 +27,11 @@ const Quiz = ({
 
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [quizSize, setQuizSize] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
 
   const [loadingError, setLoadingError] = useState(null);
-  const [quizStage, setQuizStage] = useState("setup-topic");
+  const [quizStage, setQuizStage] = useState("setup-name");
 
   const [answerFeedback, setAnswerFeedback] = useState({
     answered: false,
@@ -67,6 +70,40 @@ const Quiz = ({
     Математика: "mathematics.js",
   };
 
+  // Функція для розрахунку оцінки, перенесена з Results.js
+  const getResultFeedback = useCallback((finalScore, totalQuestions) => {
+    const percentage = (finalScore / totalQuestions) * 100;
+    if (percentage >= 80) {
+      return "🤩 Чудово";
+    } else if (percentage >= 60) {
+      return "👍 Добре";
+    } else if (percentage >= 30) {
+      return "🙂 Задовільно";
+    } else {
+      return "😞 Дуже погано";
+    }
+  }, []);
+
+  const saveResultsToLocalStorage = useCallback(
+    (finalScore, totalQuestions, name, time) => {
+      const results = JSON.parse(localStorage.getItem("quizResults")) || [];
+      // Розраховуємо оцінку перед збереженням
+      const rating = getResultFeedback(finalScore, totalQuestions);
+      const newResult = {
+        name: name,
+        score: finalScore,
+        totalQuestions: totalQuestions,
+        time: time,
+        date: new Date().toISOString(),
+        topic: selectedTopic,
+        rating: rating, // Додаємо поле "rating"
+      };
+      results.push(newResult);
+      localStorage.setItem("quizResults", JSON.stringify(results));
+    },
+    [selectedTopic, getResultFeedback]
+  );
+
   const handleAnswerClick = useCallback(
     (selectedOption) => {
       if (timerRef.current) {
@@ -87,9 +124,8 @@ const Quiz = ({
         isCorrect ? "Відповідь правильна ✅" : "Відповідь неправильна ❌"
       );
 
-      if (isCorrect) {
-        setScore((prevScore) => prevScore + 1);
-      }
+      const nextScore = isCorrect ? score + 1 : score;
+      setScore(nextScore);
 
       setAnimationClass("fade-out");
 
@@ -107,12 +143,27 @@ const Quiz = ({
           const endTime = new Date();
           const elapsedTimeInSeconds = Math.floor((endTime - startTime) / 1000);
           setTotalTime(elapsedTimeInSeconds);
+          saveResultsToLocalStorage(
+            nextScore,
+            questions.length,
+            userName,
+            elapsedTimeInSeconds
+          );
           setQuizStage("results");
           onQuizEnd();
         }
       }, 2000);
     },
-    [questions, currentQuestionIndex, onAnswerFeedback, startTime, onQuizEnd]
+    [
+      questions,
+      currentQuestionIndex,
+      onAnswerFeedback,
+      startTime,
+      onQuizEnd,
+      score,
+      userName,
+      saveResultsToLocalStorage,
+    ]
   );
 
   const handleRestart = () => {
@@ -123,7 +174,7 @@ const Quiz = ({
     setUserName("");
     setError("");
     setTotalTime(null);
-    setQuizStage("setup-topic");
+    setQuizStage("setup-name");
     setAnswerFeedback({
       answered: false,
       isCorrect: null,
@@ -132,6 +183,15 @@ const Quiz = ({
     setInfoMessage("");
     onRestartQuiz();
   };
+
+  useEffect(() => {
+    const savedName = localStorage.getItem("userName");
+    if (savedName) {
+      setUserName(savedName);
+      setQuizStage("setup-name");
+      setShowWelcomeMessage(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (selectedTopic) {
@@ -163,7 +223,18 @@ const Quiz = ({
   }, [selectedTopic, onQuizLoad]);
 
   useEffect(() => {
+    if (showHistory) {
+      onHeaderChange("Історія ігор");
+      return;
+    }
+    if (showWelcomeMessage) {
+      onHeaderChange("З поверненням!");
+      return;
+    }
     switch (quizStage) {
+      case "setup-name":
+        onHeaderChange("Як тебе звати?");
+        break;
       case "setup-topic":
         onHeaderChange("Оберіть тему");
         break;
@@ -172,9 +243,6 @@ const Quiz = ({
         break;
       case "setup-size":
         onHeaderChange("Оберіть кількість питань");
-        break;
-      case "setup-name":
-        onHeaderChange("Як тебе звати?");
         break;
       case "playing":
         onHeaderChange(selectedTopic);
@@ -186,7 +254,13 @@ const Quiz = ({
         onHeaderChange("Квіз");
         break;
     }
-  }, [quizStage, onHeaderChange, selectedTopic]);
+  }, [
+    quizStage,
+    onHeaderChange,
+    selectedTopic,
+    showHistory,
+    showWelcomeMessage,
+  ]);
 
   useEffect(() => {
     if (quizStage === "playing") {
@@ -199,11 +273,12 @@ const Quiz = ({
 
       timerRef.current = setInterval(() => {
         setTimeLeft((prevTime) => {
-          if (prevTime <= 1) {
+          const newTime = prevTime - 1;
+          if (newTime <= 0) {
             handleAnswerClick(null);
             return 0;
           }
-          return prevTime - 1;
+          return newTime;
         });
       }, 1000);
     }
@@ -262,11 +337,21 @@ const Quiz = ({
       setError(validationError);
     } else {
       setError("");
-      setQuestions(getRandomQuestions(quizSize));
-      setStartTime(new Date());
-      setQuizStage("playing");
-      onQuizStart();
+      localStorage.setItem("userName", userName);
+      setQuizStage("setup-topic");
     }
+  };
+
+  const handleContinue = () => {
+    setShowWelcomeMessage(false);
+    setQuizStage("setup-topic");
+  };
+
+  const handleNewUser = () => {
+    setShowWelcomeMessage(false);
+    setUserName("");
+    localStorage.removeItem("userName");
+    setQuizStage("setup-name");
   };
 
   if (loadingError) {
@@ -280,7 +365,37 @@ const Quiz = ({
     );
   }
 
+  if (showHistory) {
+    return <History onReturnToResults={() => setShowHistory(false)} />;
+  }
+
+  if (showWelcomeMessage) {
+    return (
+      <div className="welcome-container">
+        <h2>Ласкаво просимо назад, {userName}!</h2>
+        <p>Хочеш продовжити гру з цим іменем?</p>
+        <div className="welcome-buttons">
+          <button onClick={handleContinue} className="restart-button">
+            Продовжити
+          </button>
+          <button onClick={handleNewUser} className="history-button">
+            Змінити ім'я
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   switch (quizStage) {
+    case "setup-name":
+      return (
+        <SetupName
+          userName={userName}
+          onNameChange={handleNameChange}
+          onStartQuiz={handleStartQuiz}
+          error={error}
+        />
+      );
     case "setup-topic":
       return (
         <SetupTopic
@@ -296,17 +411,11 @@ const Quiz = ({
           selectedTopic={selectedTopic}
           onSelectSize={(size) => {
             setQuizSize(size);
-            setQuizStage("setup-name");
+            setQuestions(getRandomQuestions(size));
+            setStartTime(new Date());
+            setQuizStage("playing");
+            onQuizStart();
           }}
-        />
-      );
-    case "setup-name":
-      return (
-        <SetupName
-          userName={userName}
-          onNameChange={handleNameChange}
-          onStartQuiz={handleStartQuiz}
-          error={error}
         />
       );
     case "playing":
@@ -346,7 +455,10 @@ const Quiz = ({
           userName={userName}
           totalTime={totalTime}
           onRestartQuiz={handleRestart}
+          onShowHistory={() => setShowHistory(true)}
           quizEndTime={new Date()}
+          // Передаємо getResultFeedback в Results.js для відображення
+          getResultFeedback={getResultFeedback}
         />
       );
     default:

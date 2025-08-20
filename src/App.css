@@ -31,7 +31,7 @@ body {
   background-color: rgba(255, 255, 255, 0.809);
   padding: 5px;
   border: 1px solid #ccc;
-  margin-bottom: 30%;
+  margin-bottom: 10%;
 }
 
 .App-title {
@@ -371,6 +371,7 @@ body {
 .result-text {
   font-size: 1.5em;
   font-weight: bold;
+  margin-bottom: 2rem;
 }
 
 .excellent {
@@ -476,12 +477,25 @@ body {
   animation: incorrect-feedback 1s forwards;
 }
 
+.welcome-container {
+  padding: 20px;
+  background-color: #f0fff0;
+  border-radius: 8px;
+  animation: fadeIn 1s;
+}
+
 .welcome-message {
   font-size: 1.5em;
   font-weight: bold;
   margin-bottom: 20px;
   color: #8020ed;
 
+}
+
+.welcome-buttons {
+  display: flex;
+  justify-content: space-evenly;
+  margin-top: 20px;
 }
 
 .footer-text {
@@ -528,4 +542,93 @@ body {
 /* Анімація зникнення */
 .fade-out {
   opacity: 0;
+}
+
+/*-------------------------------- history ------------------------------- */
+.history-container {
+  padding: 20px;
+  background-color: #f4f4f9;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  max-width: 900px;
+  margin: 40px auto;
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+}
+
+.history-container h2 {
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.history-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 15px 30px;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.history-button:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+  /* Оновлено: встановлюємо максимальну висоту для контейнера таблиці */
+  max-height: 50vh;
+  /* Оновлено: додаємо вертикальну прокрутку, якщо вміст не поміщається */
+  overflow-y: auto;
+
+  border-radius: 8px;
+  /* Додано для збереження заокруглених кутів */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  /* Додано тінь */
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+}
+
+th,
+td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #e9ecef;
+  font-weight: bold;
+  color: #555;
+  text-transform: uppercase;
+  font-size: 0.9em;
+  /* Важливо: дозволяє прокручувати заголовки разом з таблицею */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+tr:hover {
+  background-color: #f1f1f1;
+}
+
+.history-container p {
+  font-size: 1.2em;
+  color: #666;
+  margin-bottom: 20px;
 }
