@@ -10,7 +10,6 @@ const Quiz = ({
   onQuizStart,
   onQuizEnd,
   onQuizLoad,
-  onAnswerFeedback,
   onHeaderChange,
   onRestartQuiz,
 }) => {
@@ -70,7 +69,6 @@ const Quiz = ({
     Математика: "mathematics.js",
   };
 
-  // Функція для розрахунку оцінки, перенесена з Results.js
   const getResultFeedback = useCallback((finalScore, totalQuestions) => {
     const percentage = (finalScore / totalQuestions) * 100;
     if (percentage >= 80) {
@@ -87,7 +85,6 @@ const Quiz = ({
   const saveResultsToLocalStorage = useCallback(
     (finalScore, totalQuestions, name, time) => {
       const results = JSON.parse(localStorage.getItem("quizResults")) || [];
-      // Розраховуємо оцінку перед збереженням
       const rating = getResultFeedback(finalScore, totalQuestions);
       const newResult = {
         name: name,
@@ -96,7 +93,7 @@ const Quiz = ({
         time: time,
         date: new Date().toISOString(),
         topic: selectedTopic,
-        rating: rating, // Додаємо поле "rating"
+        rating: rating,
       };
       results.push(newResult);
       localStorage.setItem("quizResults", JSON.stringify(results));
@@ -108,11 +105,11 @@ const Quiz = ({
     (selectedOption) => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        console.log("Таймер зупинено після вибору відповіді");
       }
 
       const currentQuestion = questions[currentQuestionIndex];
       const isCorrect = selectedOption === currentQuestion.correctAnswer;
-      onAnswerFeedback(isCorrect);
 
       setAnswerFeedback({
         answered: true,
@@ -126,11 +123,13 @@ const Quiz = ({
 
       const nextScore = isCorrect ? score + 1 : score;
       setScore(nextScore);
+      console.log(`Наступний рахунок: ${nextScore}`);
 
       setAnimationClass("fade-out");
 
       setTimeout(() => {
         const nextQuestionIndex = currentQuestionIndex + 1;
+        console.log(`Перехід до питання: ${nextQuestionIndex}`);
         if (nextQuestionIndex < questions.length) {
           setCurrentQuestionIndex(nextQuestionIndex);
           setAnswerFeedback({
@@ -151,13 +150,13 @@ const Quiz = ({
           );
           setQuizStage("results");
           onQuizEnd();
+          console.log("Квіз завершено, перехід до результатів");
         }
       }, 2000);
     },
     [
       questions,
       currentQuestionIndex,
-      onAnswerFeedback,
       startTime,
       onQuizEnd,
       score,
@@ -167,6 +166,7 @@ const Quiz = ({
   );
 
   const handleRestart = () => {
+    console.log("Перезапуск квізу");
     setCurrentQuestionIndex(0);
     setScore(0);
     setQuizSize(null);
@@ -188,13 +188,14 @@ const Quiz = ({
     const savedName = localStorage.getItem("userName");
     if (savedName) {
       setUserName(savedName);
-      setQuizStage("setup-name");
       setShowWelcomeMessage(true);
+      console.log(`Знайдено збережене ім'я: ${savedName}`);
     }
   }, []);
 
   useEffect(() => {
     if (selectedTopic) {
+      console.log(`Обрано тему: ${selectedTopic}. Завантаження питань...`);
       setLoadingError(null);
       setQuizStage("loading");
       const fileName = topicFileMap[selectedTopic];
@@ -212,6 +213,9 @@ const Quiz = ({
           setAllQuestions(module.questions);
           onQuizLoad?.(selectedTopic);
           setQuizStage("setup-size");
+          console.log(
+            "Питання завантажено. Перехід до вибору кількості питань."
+          );
         })
         .catch((error) => {
           console.error("Помилка завантаження питань:", error);
@@ -223,6 +227,7 @@ const Quiz = ({
   }, [selectedTopic, onQuizLoad]);
 
   useEffect(() => {
+    console.log(`Поточний етап квізу: ${quizStage}`);
     if (showHistory) {
       onHeaderChange("Історія ігор");
       return;
@@ -262,25 +267,37 @@ const Quiz = ({
     showWelcomeMessage,
   ]);
 
+  // ❗ ВИПРАВЛЕНО: Додано перевірку, щоб нескінченний цикл не запускався
   useEffect(() => {
-    if (quizStage === "playing") {
-      setTimeLeft(30);
-      setAnimationClass("fade-in");
+    // Перевіряємо, чи ми на етапі гри і чи є питання
+    if (quizStage === "playing" && questions.length > 0) {
+      // Перевіряємо, чи поточний індекс питання не виходить за межі масиву
+      if (currentQuestionIndex < questions.length) {
+        console.log(
+          "Запуск нового таймера для питання",
+          currentQuestionIndex + 1
+        );
+        setTimeLeft(30);
+        setAnimationClass("fade-in");
 
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+
+        const countdown = setInterval(() => {
+          setTimeLeft((prevTime) => {
+            console.log(`Таймер: ${prevTime - 1}`);
+            if (prevTime <= 1) {
+              clearInterval(timerRef.current);
+              handleAnswerClick(null);
+              return 0;
+            }
+            return prevTime - 1;
+          });
+        }, 1000);
+
+        timerRef.current = countdown;
       }
-
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prevTime) => {
-          const newTime = prevTime - 1;
-          if (newTime <= 0) {
-            handleAnswerClick(null);
-            return 0;
-          }
-          return newTime;
-        });
-      }, 1000);
     }
 
     return () => {
@@ -288,7 +305,7 @@ const Quiz = ({
         clearInterval(timerRef.current);
       }
     };
-  }, [quizStage, currentQuestionIndex, handleAnswerClick]);
+  }, [quizStage, currentQuestionIndex, questions.length, handleAnswerClick]);
 
   const getRandomQuestions = (count) => {
     const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
@@ -375,10 +392,10 @@ const Quiz = ({
         <h2>Ласкаво просимо назад, {userName}!</h2>
         <p>Хочеш продовжити гру з цим іменем?</p>
         <div className="welcome-buttons">
-          <button onClick={handleContinue} className="restart-button">
+          <button onClick={handleContinue} className="continue-button">
             Продовжити
           </button>
-          <button onClick={handleNewUser} className="history-button">
+          <button onClick={handleNewUser} className="new-user-button">
             Змінити ім'я
           </button>
         </div>
@@ -415,6 +432,7 @@ const Quiz = ({
             setStartTime(new Date());
             setQuizStage("playing");
             onQuizStart();
+            console.log("Розмір квізу обрано. Перехід до гри.");
           }}
         />
       );
@@ -457,7 +475,6 @@ const Quiz = ({
           onRestartQuiz={handleRestart}
           onShowHistory={() => setShowHistory(true)}
           quizEndTime={new Date()}
-          // Передаємо getResultFeedback в Results.js для відображення
           getResultFeedback={getResultFeedback}
         />
       );
